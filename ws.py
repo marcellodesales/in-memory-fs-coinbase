@@ -8,12 +8,12 @@ import json
 
 # https://fastapi.tiangolo.com/tutorial/debugging/
 import uvicorn
-from fastapi.responses import JSONResponse
 
 # Already creates an API docs
 # https://fastapi.tiangolo.com/tutorial/security/first-steps/
 app = FastAPI()
 
+# The in-memory filesystem instance
 fsys = FileSystem()
 
 
@@ -30,7 +30,7 @@ def _resolve_path(path: str) -> str:
     return path if path[0] == "/" else f"/{path}"
 
 
-def make_metadata_response(operation, path, dir_type=True, additional_data=dict()):
+def make_metadata_response(operation: str, path: str, dir_type=True, additional_data=dict()) -> FsResponse:
     response = FsResponse(op=operation, path=path, type="dir" if dir_type else "file")
     # https://www.geeksforgeeks.org/python-merging-two-dictionaries/
     response.meta = additional_data
@@ -54,6 +54,12 @@ def create_dir_or_file(path: str, file: Optional[bool] = False, data=Body(...)):
         except Exception as errorCreatingDir:
             resp.error = errorCreatingDir
 
+            # https://fastapi.tiangolo.com/advanced/additional-status-codes/
+            # Avoid errors
+            # https://www.w3schools.com/python/gloss_python_json_parse.asp
+            # https://stackoverflow.com/questions/65230997/when-i-use-fastapi-and-pydantic-to-build-post-api-appear-a-typeerror-object-of/69537682#69537682
+            raise HTTPException(status_code=400, detail=json.loads(resp.json()))
+
         return resp
 
     else:
@@ -65,6 +71,12 @@ def create_dir_or_file(path: str, file: Optional[bool] = False, data=Body(...)):
 
         except Exception as errorCreatingFile:
             resp.error = errorCreatingFile
+
+            # https://fastapi.tiangolo.com/advanced/additional-status-codes/
+            # Avoid errors
+            # https://www.w3schools.com/python/gloss_python_json_parse.asp
+            # https://stackoverflow.com/questions/65230997/when-i-use-fastapi-and-pydantic-to-build-post-api-appear-a-typeerror-object-of/69537682#69537682
+            raise HTTPException(status_code=400, detail=json.loads(resp.json()))
 
         return resp
 
@@ -82,7 +94,6 @@ def get_path(path: str, metadata: Optional[bool] = True):
         if metadata:
             resp = make_metadata_response(op, path)
             resp.meta = fsys.read_dir(path)
-            # TODO: add the list of dir when reading
             return resp
 
     elif fsys.contains_file(path):
