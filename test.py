@@ -1,5 +1,6 @@
 from fs import FileSystem
 
+
 # map[directory] = [[file1]=data, [file2]=data]
 def test_initial_state(fs: FileSystem):
     try:
@@ -16,8 +17,7 @@ def test_write_read_file(fs: FileSystem, file_path: str, data: str):
         data_size = fs.write_file(file_path, data)
         assert data_size == len(data)
 
-        dir_path, file_name = FileSystem._make_file_metadata(file_path)
-        assert fs.contains_file(dir_path, file_name)
+        assert fs.contains_file(file_path)
 
         file_contents = fs.read_file(file_path)
         assert file_contents == data
