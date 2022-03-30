@@ -18,6 +18,8 @@ pip install -r requirements.txt
 
 Run ws.py and go to `localhost:8000/docs`
 
+<img width="1459" alt="Screen Shot 2022-03-29 at 9 33 50 PM" src="https://user-images.githubusercontent.com/131457/160752045-64b5fab7-1c68-48ed-882f-9c072cd2a3c7.png">
+
 ## HTTP POST /fs/{path}
 
 > creates new dir or file
