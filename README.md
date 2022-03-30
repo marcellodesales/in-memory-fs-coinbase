@@ -8,11 +8,14 @@ This is an implementation of an in-memory file-system + Web Service.
 
 pip install -r requirements.txt
 
-# Framework
+# Core
+
+> Support: features implemented
 
 * mkdir: creates dir
 * write_file: creates file
 * read_file: read contents
+* read_dir: list the contents of dir
 
 # API
 
