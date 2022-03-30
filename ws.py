@@ -2,7 +2,7 @@ from fs import FileSystem
 
 from typing import Optional
 # https://github.com/tiangolo/fastapi/blob/master/tests/test_modules_same_name_body/app/b.py
-from fastapi import FastAPI, Body, HTTPException, status
+from fastapi import FastAPI, Body, HTTPException, Response, status
 from pydantic import BaseModel
 import json
 
@@ -116,8 +116,26 @@ def get_path(path: str, metadata: Optional[bool] = True):
     # https://stackoverflow.com/questions/65230997/when-i-use-fastapi-and-pydantic-to-build-post-api-appear-a-typeerror-object-of/69537682#69537682
     raise HTTPException(status_code=404, detail=json.loads(resp.json()))
 
+
 # exists, retuns metadata
-# HEAD /fs/{path} 
+# HEAD /fs/{path}
+# make dir or file
+# POST /fs/{path}?file=true  / dir = true | data == null
+# https://fastapi.tiangolo.com/tutorial/security/first-steps/ (REST API DOC)
+# For path converter: https://fastapi.tiangolo.com/tutorial/path-params/#path-convertor
+# For body: https://fastapi.tiangolo.com/tutorial/body/
+@app.head("/fs/{path:path}", operation_id="/fs/path", summary="Verifies if a path exist")
+def check_path_exists(path: str):
+    path = _resolve_path(path)
+    if fsys.contains_file(path):
+        return Response(status_code=200, headers={"X-type": "file"})
+
+    elif fsys.contains_dir(path):
+        return Response(status_code=200, headers={"X-type": "dir"})
+
+    else:
+        raise HTTPException(status_code=404, detail="Not found!")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
