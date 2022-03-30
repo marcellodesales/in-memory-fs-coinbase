@@ -117,10 +117,7 @@ def get_path(path: str, metadata: Optional[bool] = True):
     raise HTTPException(status_code=404, detail=json.loads(resp.json()))
 
 
-# exists, retuns metadata
 # HEAD /fs/{path}
-# make dir or file
-# POST /fs/{path}?file=true  / dir = true | data == null
 # https://fastapi.tiangolo.com/tutorial/security/first-steps/ (REST API DOC)
 # For path converter: https://fastapi.tiangolo.com/tutorial/path-params/#path-convertor
 # For body: https://fastapi.tiangolo.com/tutorial/body/
@@ -135,6 +132,22 @@ def check_path_exists(path: str):
 
     else:
         raise HTTPException(status_code=404, detail="Not found!")
+
+
+# DELETE /fs/{path}
+# delete an empty dir or file
+# https://fastapi.tiangolo.com/tutorial/security/first-steps/ (REST API DOC)
+# For path converter: https://fastapi.tiangolo.com/tutorial/path-params/#path-convertor
+# For body: https://fastapi.tiangolo.com/tutorial/body/
+@app.delete("/fs/{path:path}", operation_id="/fs/path", summary="Deletes a dir or a file if it exists")
+def check_path_exists(path: str):
+    path = _resolve_path(path)
+    try:
+        type_deleted = fsys.rm(path)
+        return Response(status_code=200, headers={"X-type": type_deleted})
+
+    except Exception as error_deleting:
+        raise HTTPException(status_code=404, detail=error_deleting)
 
 
 if __name__ == "__main__":

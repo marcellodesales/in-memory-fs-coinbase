@@ -28,25 +28,57 @@ class FileSystem:
         return len(data)
 
     def read_dir(self, path) -> [dict]:
+        file_names = []
+        if_root = path == "/"
+
         if self.contains_dir(path):
-            file_names = []
             for file in self.tree[path]:
                 # pointer to the keys
                 # https://stackoverflow.com/questions/18552001/accessing-dict-keys-element-by-index-in-python3/66109243#66109243
                 file_names.append(*file)
 
+            if path == "/":
+                for sub_root_path in self.tree.keys():
+                    # skip the root as it was processed above
+                    if "/" == sub_root_path:
+                        continue
+
+                    # from the root, either a file or a dir
+                    dir_path, file_name = FileSystem.make_file_metadata(sub_root_path)
+                    # Root dir will have exactly 2
+                    if dir_path == "/":
+                        file_names.append(file_name)
+
             # Add sufix to comprehension https://www.geeksforgeeks.org/python-append-suffix-prefix-to-strings-in-list/
-            return [f"{path}/{name}" for name in file_names]
+            return [f"/{name}" for name in file_names] if if_root else [f"{path}/{name}" for name in file_names]
 
         raise Exception(f"Directory not found '{path}'")
 
     def read_file(self, path) -> str:
-        dir_path, file_name = FileSystem.make_file_metadata(path)
         if self.contains_file(path):
+            dir_path, file_name = FileSystem.make_file_metadata(path)
             tree_ref = self.tree[dir_path]
             for file_ref in tree_ref:
                 if file_name in file_ref:
                     return file_ref[file_name]
+
+    def rm(self, path) -> str:
+        if self.contains_file(path):
+            dir_path, file_name = FileSystem.make_file_metadata(path)
+            obj_to_remove = None
+            for file_obj in self.tree[dir_path]:
+                if file_name in file_obj:
+                    obj_to_remove = file_obj
+                    break
+            self.tree[dir_path].remove(obj_to_remove)
+            return "file"
+
+        elif self.contains_dir(path):
+            del self.tree[path]
+            return "dir"
+
+        else:
+            raise FileNotFoundError(f"The path '{path}' does NOT exist!")
 
     @staticmethod
     def make_file_metadata(file_path) -> tuple[str, str]:
