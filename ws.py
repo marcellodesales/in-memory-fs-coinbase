@@ -1,0 +1,112 @@
+from fs import FileSystem
+
+from typing import Optional
+# https://github.com/tiangolo/fastapi/blob/master/tests/test_modules_same_name_body/app/b.py
+from fastapi import FastAPI, Body, HTTPException, status
+from pydantic import BaseModel
+import json
+
+# https://fastapi.tiangolo.com/tutorial/debugging/
+import uvicorn
+from fastapi.responses import JSONResponse
+
+# Already creates an API docs
+# https://fastapi.tiangolo.com/tutorial/security/first-steps/
+app = FastAPI()
+
+fsys = FileSystem()
+
+
+# https://fastapi.tiangolo.com/tutorial/response-model/#response-model
+class FsResponse(BaseModel):
+    op: str
+    path: str
+    type: str
+    error: Optional[str] = None
+    meta: Optional[object] = None
+
+
+def _resolve_path(path: str) -> str:
+    return path if path[0] == "/" else f"/{path}"
+
+
+def make_metadata_response(operation, path, dir_type=True, additional_data=dict()):
+    response = FsResponse(op=operation, path=path, type="dir" if dir_type else "file")
+    # https://www.geeksforgeeks.org/python-merging-two-dictionaries/
+    response.meta = additional_data
+    return response
+
+
+# make dir or file
+# POST /fs/{path}?file=true  / dir = true | data == null
+# https://fastapi.tiangolo.com/tutorial/security/first-steps/ (REST API DOC)
+# For path converter: https://fastapi.tiangolo.com/tutorial/path-params/#path-convertor
+# For body: https://fastapi.tiangolo.com/tutorial/body/
+@app.post("/fs/{path:path}", operation_id="/fs/path", summary="Create a directory or a file", response_model=FsResponse)
+def create_dir_or_file(path: str, file: Optional[bool] = False, data=Body(...)):
+    path = _resolve_path(path)
+    if not file:
+        op = "mkdir"
+        resp = make_metadata_response(op, path)
+        try:
+            fsys.mkdir(path)
+
+        except Exception as errorCreatingDir:
+            resp.error = errorCreatingDir
+
+        return resp
+
+    else:
+        op = "write_file"
+        resp = make_metadata_response(op, path, False)
+        try:
+            fsys.write_file(path, data)
+            resp.meta = {"len": len(data)}
+
+        except Exception as errorCreatingFile:
+            resp.error = errorCreatingFile
+
+        return resp
+
+
+# get dir or file (metadata)
+# GET /fs/{path}?metadata=true
+# https://fastapi.tiangolo.com/tutorial/path-params/#path-convertor
+@app.get("/fs/{path:path}", operation_id="/fs/path", summary="Retrieves a directory or a file metadata and data", response_model=FsResponse)
+def get_path(path: str, metadata: Optional[bool] = True):
+    path = _resolve_path(path)
+
+    if fsys.contains_dir(path):
+        op = "read_dir"
+
+        if metadata:
+            resp = make_metadata_response(op, path)
+            resp.meta = fsys.read_dir(path)
+            # TODO: add the list of dir when reading
+            return resp
+
+    elif fsys.contains_file(path):
+        data = fsys.read_file(path)
+        op = "read_file"
+
+        if metadata:
+            resp = make_metadata_response(op, path, False, {"data": data, "len": len(data)})
+            return resp
+
+    path = _resolve_path(path)
+    op = "read_path"
+    # temporary assumption
+    is_dir = "." not in path
+    resp = make_metadata_response(op, path, is_dir)
+    resp.error = f"Provided path '{path}' does not exist!"
+    # https://fastapi.tiangolo.com/advanced/additional-status-codes/
+    # Avoid errors
+    # https://www.w3schools.com/python/gloss_python_json_parse.asp
+    # https://stackoverflow.com/questions/65230997/when-i-use-fastapi-and-pydantic-to-build-post-api-appear-a-typeerror-object-of/69537682#69537682
+    raise HTTPException(status_code=404, detail=json.loads(resp.json()))
+
+# exists, retuns metadata
+# HEAD /fs/{path} 
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
