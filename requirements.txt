@@ -1,0 +1,10 @@
+# https://fastapi.tiangolo.com/tutorial/
+fastapi==0.75.0
+
+# https://fastapi.tiangolo.com/deployment/manually/
+# https://fastapi.tiangolo.com/tutorial/debugging/
+# async server: https://asgi.readthedocs.io/en/latest/
+uvicorn>=0.17.6
+
+# Data validation and management
+pydantic==1.9.0
